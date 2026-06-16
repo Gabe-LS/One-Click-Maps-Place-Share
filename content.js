@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var TAG = "[GMBS]";
+  var TAG = "[OCMPS]";
   var SHARE_ICON = String.fromCharCode(0xe80d);
   var PUA_RE = new RegExp("^[\\ue000-\\uf8ff]+\\s*");
 
@@ -26,6 +26,7 @@
   });
 
   // ── Dialog hiding ───────────────────────────────────────────
+  // Activates CSS rules injected by interceptor.js at document_start.
 
   function hideDialog() {
     document.documentElement.setAttribute("data-gmbs-hiding", "");
@@ -112,7 +113,7 @@
 
   // ── Short link retrieval ───────────────────────────────────
 
-  var SHORT_LINK_RE = /https?:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9]+/;
+  var SHORT_LINK_RE = /https?:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9_-]+/;
 
   function readLinkFromDialog() {
     var dialog = document.querySelector('[role="dialog"]');

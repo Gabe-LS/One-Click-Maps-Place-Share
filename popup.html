@@ -70,11 +70,25 @@ body {
 .toggle input:checked + .track::after {
   transform: translateX(16px);
 }
+.credit {
+  padding: 10px 20px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 10px;
+  color: #9aa0a6;
+  text-align: center;
+}
+.credit a {
+  color: #9aa0a6;
+  text-decoration: none;
+}
+.credit a:hover {
+  text-decoration: underline;
+}
 </style>
 </head>
 <body>
   <div class="header">
-    <h1>One-Click Place Share</h1>
+    <h1>One-Click Maps Place Share</h1>
     <p>v1.0</p>
   </div>
   <div class="setting">
@@ -84,6 +98,7 @@ body {
       <span class="track"></span>
     </label>
   </div>
+  <div class="credit">Icon by <a href="https://www.flaticon.com/authors/kerismaker" target="_blank">Kerismaker</a></div>
   <script src="popup.js"></script>
 </body>
 </html>

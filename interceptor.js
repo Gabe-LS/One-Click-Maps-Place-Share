@@ -5,30 +5,39 @@
 (function () {
   "use strict";
 
-  var TAG = "[GMBS]";
+  // ── Dialog hiding CSS ──
+  // Injected at document_start so rules are parsed before any dialog
+  // can render. Activated by data-gmbs-hiding on <html>.
 
-  function logEnabled() {
-    return document.documentElement.hasAttribute("data-gmbs-debug");
-  }
-
-  // ── Pre-inject hiding CSS ──
-
+  var HIDE = "opacity:0!important;visibility:hidden!important;" +
+    "pointer-events:none!important;transition:none!important;" +
+    "background:transparent!important";
   var css = document.createElement("style");
   css.textContent =
-    'html[data-gmbs-hiding] [role="dialog"],' +
+    // Modal dialog elements (aria-modal excludes tooltips)
     'html[data-gmbs-hiding] [aria-modal="true"],' +
-    "html[data-gmbs-hiding] .MCk2mb{" +
-    "opacity:0!important;visibility:hidden!important;" +
-    "pointer-events:none!important;transition:none!important;" +
-    "background:transparent!important}";
+    'html[data-gmbs-hiding] [role="dialog"][aria-modal="true"],' +
+    "html[data-gmbs-hiding] .MCk2mb{" + HIDE + "}" +
+    // Native <dialog> and its ::backdrop pseudo-element
+    "html[data-gmbs-hiding] dialog," +
+    "html[data-gmbs-hiding] dialog::backdrop," +
+    "html[data-gmbs-hiding] ::backdrop{display:none!important;" + HIDE + "}" +
+    // Backdrop sibling: hide ALL children of any element that contains
+    // a MODAL dialog (aria-modal distinguishes from tooltips that also
+    // use role="dialog" but never set aria-modal="true")
+    'html[data-gmbs-hiding] *:has(> [jsaction*="modal"]) > *,' +
+    'html[data-gmbs-hiding] *:has(> [aria-modal="true"]) > *{' + HIDE + "}";
   (document.head || document.documentElement).appendChild(css);
 
   // ── XHR + fetch interceptor ──
 
-  var LINK_RE = /https?:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9]+/;
+  var TAG = "[OCMPS]";
+  var LINK_RE = /https?:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9_-]+/;
 
   function emit(url) {
-    if (logEnabled()) console.log(TAG, "intercepted short link:", url);
+    if (document.documentElement.hasAttribute("data-gmbs-debug")) {
+      console.log(TAG, "intercepted short link:", url);
+    }
     document.dispatchEvent(
       new CustomEvent("gmbs-short-link", { detail: url })
     );
