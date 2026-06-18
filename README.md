@@ -36,7 +36,7 @@ Click the extension icon in the toolbar and toggle "Debug logging". All logs use
 | `interceptor.js` | MAIN world: dialog-hiding CSS + XHR/fetch short link interceptor |
 | `content.js` | ISOLATED world: overlay, share flow, clipboard, toast |
 | `popup.html/js` | Settings popup (debug toggle) |
-| `tests/` | Playwright test scripts (brief + 10-language) |
+| `tests/` | Playwright test scripts + DevTools console debug helpers |
 
 ## Privacy
 
