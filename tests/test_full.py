@@ -60,12 +60,12 @@ def test_lang(page, code, name, idx, total):
     page.wait_for_timeout(1000)
     page.evaluate("navigator.clipboard.writeText('')")
 
-    overlay = page.query_selector("#gmbs-overlay")
-    if not overlay:
-        print(f"  [{idx}/{total}] {name}: FAIL (no overlay)")
+    btn = page.query_selector('button[jslog^="13534"]')
+    if not btn:
+        print(f"  [{idx}/{total}] {name}: FAIL (no share button for click)")
         return False
 
-    overlay.click()
+    btn.click()
 
     for _ in range(40):
         page.wait_for_timeout(250)

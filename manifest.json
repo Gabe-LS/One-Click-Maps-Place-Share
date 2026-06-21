@@ -14,8 +14,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://www.google.com/maps/*",
-        "https://*.google.com/maps/*"
+        "https://www.google.com/maps*",
+        "https://*.google.com/maps*"
       ],
       "js": ["interceptor.js"],
       "run_at": "document_start",
@@ -23,11 +23,11 @@
     },
     {
       "matches": [
-        "https://www.google.com/maps/*",
-        "https://*.google.com/maps/*"
+        "https://www.google.com/maps*",
+        "https://*.google.com/maps*"
       ],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "icons": {

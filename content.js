@@ -20,13 +20,51 @@
     if (debug) console.error.apply(console, [TAG].concat(Array.prototype.slice.call(arguments)));
   }
 
+  // ── Main flow: interceptor caught a short link ─────────────
+
   document.addEventListener("gmbs-short-link", function (e) {
     pendingLink = e.detail;
     pendingLinkUrl = window.location.pathname;
+
+    if (!intercepting) {
+      intercepting = true;
+      hideDialog();
+      collectPlaceInfo(2000).then(function (info) {
+        closeShareDialog();
+        unhideDialog();
+        copyAndToast(info.name, info.location, pendingLink);
+        intercepting = false;
+      });
+    }
   });
 
+  // ── Share button click detection ───────────────────────────
+  // Capturing listener hides the dialog before it can render.
+
+  function isShareButton(el) {
+    if (!el || el.tagName !== "BUTTON") return false;
+    var jslog = el.getAttribute("jslog") || "";
+    if (jslog.indexOf("13534") === 0) return true;
+    if (el.hasAttribute("data-value")) {
+      var icon = el.querySelector("span");
+      if (icon && icon.textContent.trim() === SHARE_ICON) return true;
+    }
+    return false;
+  }
+
+  document.addEventListener("click", function (e) {
+    if (intercepting) return;
+    var btn = e.target.closest("button");
+    if (btn && isShareButton(btn)) {
+      log("share click detected, hiding dialog");
+      hideDialog();
+      setTimeout(function () {
+        if (!intercepting) unhideDialog();
+      }, 10000);
+    }
+  }, true);
+
   // ── Dialog hiding ───────────────────────────────────────────
-  // Activates CSS rules injected by interceptor.js at document_start.
 
   function hideDialog() {
     document.documentElement.setAttribute("data-gmbs-hiding", "");
@@ -34,26 +72,6 @@
 
   function unhideDialog() {
     document.documentElement.removeAttribute("data-gmbs-hiding");
-  }
-
-  // ── Share button detection ─────────────────────────────────
-
-  function findShareButton() {
-    var btns = document.querySelectorAll("button[data-value]");
-    for (var i = 0; i < btns.length; i++) {
-      var icon = btns[i].querySelector("span");
-      if (icon && icon.textContent.trim() === SHARE_ICON) {
-        log("share button found by icon codepoint");
-        return btns[i];
-      }
-    }
-    var byJslog = document.querySelector('button[jslog^="13534"]');
-    if (byJslog) {
-      warn("share button found by jslog fallback (icon match failed)");
-      return byJslog;
-    }
-    err("share button not found by any strategy");
-    return null;
   }
 
   // ── Place info from page ───────────────────────────────────
@@ -102,6 +120,29 @@
     return null;
   }
 
+  function collectPlaceInfo(timeoutMs) {
+    return new Promise(function (resolve) {
+      var name = getPlaceName();
+      var loc = getPlaceLocation();
+      if (loc) {
+        resolve({ name: name, location: loc });
+        return;
+      }
+      log("address not ready, polling up to", timeoutMs, "ms");
+      var start = Date.now();
+      var check = function () {
+        name = getPlaceName();
+        loc = getPlaceLocation();
+        if (loc || Date.now() - start > timeoutMs) {
+          resolve({ name: name, location: loc });
+          return;
+        }
+        setTimeout(check, 100);
+      };
+      setTimeout(check, 100);
+    });
+  }
+
   // ── Close dialog ───────────────────────────────────────────
 
   function closeShareDialog() {
@@ -139,103 +180,6 @@
         bubbles: true,
       })
     );
-  }
-
-  // ── Short link retrieval ───────────────────────────────────
-
-  var SHORT_LINK_RE = /https?:\/\/maps\.app\.goo\.gl\/[A-Za-z0-9_-]+/;
-
-  function readLinkFromDialog() {
-    var dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) return null;
-
-    var inputs = dialog.querySelectorAll("input");
-    for (var a = 0; a < inputs.length; a++) {
-      var m = (inputs[a].value || "").match(SHORT_LINK_RE);
-      if (m) return m[0];
-    }
-
-    var els = dialog.querySelectorAll("span, div, a");
-    for (var b = 0; b < els.length; b++) {
-      if (els[b].children.length > 0) continue;
-      var m2 = (els[b].textContent || "").match(SHORT_LINK_RE);
-      if (m2) return m2[0];
-    }
-
-    var anchors = dialog.querySelectorAll("a[href]");
-    for (var c = 0; c < anchors.length; c++) {
-      var m3 = anchors[c].href.match(SHORT_LINK_RE);
-      if (m3) return m3[0];
-    }
-
-    return null;
-  }
-
-  function clickCopyLinkButton() {
-    var dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) return;
-
-    var toolbar = dialog.querySelector('[role="toolbar"]');
-    if (toolbar) {
-      var first = toolbar.querySelector('[role="button"]');
-      if (first) {
-        warn("clicking toolbar Copy Link button as fallback");
-        first.click();
-        return;
-      }
-    }
-
-    var btns = dialog.querySelectorAll("button");
-    for (var d = 0; d < btns.length; d++) {
-      var ja = btns[d].getAttribute("jsaction") || "";
-      if (ja.indexOf("copy") !== -1) {
-        warn("clicking jsaction copy button as fallback");
-        btns[d].click();
-        return;
-      }
-    }
-  }
-
-  function waitForLink(timeoutMs) {
-    return new Promise(function (resolve) {
-      if (pendingLink) {
-        log("link already available from interceptor");
-        resolve(pendingLink);
-        return;
-      }
-
-      var start = Date.now();
-      var triedCopyBtn = false;
-      var check = function () {
-        if (pendingLink) {
-          log("link received from interceptor after", Date.now() - start, "ms");
-          resolve(pendingLink);
-          return;
-        }
-
-        var fromDom = readLinkFromDialog();
-        if (fromDom) {
-          log("link read from dialog DOM after", Date.now() - start, "ms");
-          resolve(fromDom);
-          return;
-        }
-
-        var elapsed = Date.now() - start;
-        if (elapsed > timeoutMs) {
-          err("link retrieval timed out after", timeoutMs, "ms");
-          resolve(null);
-          return;
-        }
-
-        if (!triedCopyBtn && elapsed > 5000) {
-          triedCopyBtn = true;
-          clickCopyLinkButton();
-        }
-
-        setTimeout(check, 60);
-      };
-      check();
-    });
   }
 
   // ── Clipboard ──────────────────────────────────────────────
@@ -278,14 +222,7 @@
     }, 2000);
   }
 
-  // ── Core flow ──────────────────────────────────────────────
-
-  function cleanup() {
-    closeShareDialog();
-    unhideDialog();
-    if (overlay) overlay.style.display = "";
-    intercepting = false;
-  }
+  // ── Core helpers ───────────────────────────────────────────
 
   function copyAndToast(name, placeLocation, link) {
     var lines = [name, placeLocation, link].filter(Boolean);
@@ -293,93 +230,6 @@
     copyText(lines.join("\n")).then(function () {
       showToast("Copied: " + (name ? name.trim() : "link"));
     });
-  }
-
-  function handleShare() {
-    if (intercepting) return;
-    intercepting = true;
-
-    var btn = findShareButton();
-    if (!btn) { intercepting = false; return; }
-
-    var name = getPlaceName();
-    var placeLocation = getPlaceLocation();
-
-    if (pendingLink && pendingLinkUrl === window.location.pathname) {
-      log("using cached link (same place)");
-      copyAndToast(name, placeLocation, pendingLink);
-      intercepting = false;
-      return;
-    }
-
-    pendingLink = null;
-    pendingLinkUrl = null;
-    hideDialog();
-
-    if (overlay) overlay.style.display = "none";
-    btn.click();
-    log("share dialog triggered, waiting for link...");
-
-    waitForLink(8000).then(
-      function (link) {
-        cleanup();
-        if (link) {
-          copyAndToast(name, placeLocation, link);
-        }
-      },
-      function (e) {
-        err("share flow failed:", e);
-        cleanup();
-      }
-    );
-  }
-
-  // ── Overlay ────────────────────────────────────────────────
-
-  var overlay = null;
-
-  function createOverlay() {
-    if (overlay) return;
-    overlay = document.createElement("div");
-    overlay.id = "gmbs-overlay";
-    overlay.style.cssText =
-      "position:fixed;z-index:10000;cursor:pointer;background:transparent;display:none";
-
-    var stop = function (e) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    };
-    overlay.addEventListener("click", function (e) {
-      stop(e);
-      e.preventDefault();
-      handleShare();
-    });
-    var evts = ["pointerdown", "mousedown", "pointerup", "mouseup"];
-    for (var i = 0; i < evts.length; i++) {
-      overlay.addEventListener(evts[i], stop);
-    }
-    document.body.appendChild(overlay);
-  }
-
-  function trackPosition() {
-    if (!intercepting) {
-      var btn = findShareButton();
-      if (btn && overlay) {
-        var rect = btn.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          overlay.style.display = "block";
-          overlay.style.top = rect.top + "px";
-          overlay.style.left = rect.left + "px";
-          overlay.style.width = rect.width + "px";
-          overlay.style.height = rect.height + "px";
-        } else {
-          overlay.style.display = "none";
-        }
-      } else if (overlay) {
-        overlay.style.display = "none";
-      }
-    }
-    requestAnimationFrame(trackPosition);
   }
 
   // ── Init ───────────────────────────────────────────────────
@@ -392,8 +242,6 @@
         console.log(TAG, "debug logging enabled");
       }
     });
-    createOverlay();
-    trackPosition();
   }
 
   if (document.body) {
