@@ -11,3 +11,8 @@ tests/manual-test-profile/
 
 # Source design files
 *.psd
+store/
+tests/
+PRIVACY.md
+STORE_LISTING.md
+icon.svg
