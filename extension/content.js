@@ -92,6 +92,16 @@
       if (name) waypoints.push(name);
     }
     var dirName = waypoints.length >= 2 ? waypoints.join(" → ") : null;
+    var h1s = document.querySelectorAll("h1");
+    var duration = null;
+    for (var j = 0; j < h1s.length; j++) {
+      if (!h1s[j].closest('[role="dialog"]')) {
+        var raw = h1s[j].textContent.trim();
+        var timeRange = raw.match(/^\d{1,2}[.:]\d{2}\s*[-–]\s*\d{1,2}[.:]\d{2}\s*\((.+)\)$/);
+        duration = timeRange ? timeRange[1].trim() : raw.split("(")[0].trim();
+        break;
+      }
+    }
     var mode = null;
     var selected = document.querySelector('[data-travel_mode].vSX6le');
     if (selected) mode = selected.getAttribute("data-travel_mode");
@@ -100,8 +110,11 @@
       if (modeMatches) mode = modeMatches[modeMatches.length - 1].charAt(3);
     }
     var modeLabel = mode ? TRAVEL_MODES[mode] || "" : "";
-    if (modeLabel && dirName) dirName = dirName + " (" + modeLabel.toLowerCase() + ")";
-    return { name: dirName, location: null };
+    var location = null;
+    if (duration && modeLabel) location = duration + " " + modeLabel.toLowerCase();
+    else if (duration) location = duration;
+    else if (modeLabel) location = modeLabel;
+    return { name: dirName, location: location };
   }
 
   function getPlaceName() {
