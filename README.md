@@ -13,7 +13,7 @@ https://maps.app.goo.gl/1XdC7ozQWLMGD6Zn8
 Works on directions too — click share on any route:
 
 ```
-Milano Centrale → Lorena Suites & Apartments · By public transport
+Milano Centrale → Lorena Suites & Apartments (by public transport)
 https://maps.app.goo.gl/xvA2V7HPJTWyuouQ8
 ```
 

@@ -100,7 +100,7 @@
       if (modeMatches) mode = modeMatches[modeMatches.length - 1].charAt(3);
     }
     var modeLabel = mode ? TRAVEL_MODES[mode] || "" : "";
-    if (modeLabel && dirName) dirName = dirName + " · " + modeLabel;
+    if (modeLabel && dirName) dirName = dirName + " (" + modeLabel.toLowerCase() + ")";
     return { name: dirName, location: null };
   }
 
